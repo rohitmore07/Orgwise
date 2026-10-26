@@ -1,0 +1,387 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-track: var(--track);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --font-sans: var(--font-inter);
+  --font-display: var(--font-space-grotesk);
+}
+
+:root {
+  /* Light — soft slate base with the orgwise indigo accent */
+  --radius: 0.75rem;
+  --background: #f8fafc;
+  --foreground: #0f172a;
+  --card: #ffffff;
+  --card-foreground: #0f172a;
+  --popover: #ffffff;
+  --popover-foreground: #0f172a;
+  --primary: #6366f1;
+  --primary-foreground: #ffffff;
+  --secondary: #f1f5f9;
+  --secondary-foreground: #0f172a;
+  --muted: #f1f5f9;
+  --muted-foreground: #64748b;
+  --accent: #eef2ff;
+  --accent-foreground: #1e1b4b;
+  --destructive: #e11d48;
+  --border: rgba(15, 23, 42, 0.12);
+  --input: rgba(15, 23, 42, 0.18);
+  --ring: rgba(99, 102, 241, 0.45);
+  --chart-1: #6366f1;
+  --chart-2: #06b6d4;
+  --chart-3: #10b981;
+  --chart-4: #f59e0b;
+  --chart-5: #f43f5e;
+  /* Theme-aware extras */
+  --eyebrow: #4f46e5;
+  --slider-track: rgba(15, 23, 42, 0.16);
+  /* Subtle progress/track fills. Carries its own alpha because Tailwind v4
+     drops opacity modifiers on @theme inline (var-backed) colors. */
+  --track: rgba(15, 23, 42, 0.1);
+  --surface: rgba(255, 255, 255, 0.72);
+  --glass-bg: rgba(255, 255, 255, 0.66);
+  --scrollbar-track: #eef2f7;
+  --scrollbar-thumb: #cbd5e1;
+  --gradient-from: #4338ca;
+  --gradient-via: #4f46e5;
+  --gradient-to: #0e7490;
+  color-scheme: light;
+}
+
+.dark {
+  /* orgwise dark — Deep Obsidian */
+  --background: #030712;
+  --foreground: #f8fafc;
+  --card: #0b0f19;
+  --card-foreground: #f8fafc;
+  --popover: #0b0f19;
+  --popover-foreground: #f8fafc;
+  --primary: #6366f1;
+  --primary-foreground: #ffffff;
+  --secondary: #1e293b;
+  --secondary-foreground: #f1f5f9;
+  --muted: #161d33;
+  --muted-foreground: #94a3b8;
+  --accent: #1e293b;
+  --accent-foreground: #f1f5f9;
+  --destructive: #f43f5e;
+  --border: rgba(255, 255, 255, 0.08);
+  --input: rgba(255, 255, 255, 0.14);
+  --ring: rgba(99, 102, 241, 0.6);
+  --chart-1: #6366f1;
+  --chart-2: #06b6d4;
+  --chart-3: #10b981;
+  --chart-4: #f59e0b;
+  --chart-5: #f43f5e;
+  --eyebrow: #818cf8;
+  --slider-track: rgba(255, 255, 255, 0.12);
+  --track: rgba(255, 255, 255, 0.1);
+  --surface: rgba(255, 255, 255, 0.04);
+  --glass-bg: rgba(11, 15, 25, 0.55);
+  --scrollbar-track: #030712;
+  --scrollbar-thumb: #1e293b;
+  --gradient-from: #818cf8;
+  --gradient-via: #6366f1;
+  --gradient-to: #06b6d4;
+  color-scheme: dark;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    transition:
+      background-color 300ms ease,
+      color 300ms ease;
+  }
+  ::selection {
+    background: rgba(99, 102, 241, 0.35);
+    color: var(--foreground);
+  }
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: var(--scrollbar-track);
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb);
+    border-radius: 8px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--scrollbar-thumb);
+    filter: brightness(1.25);
+  }
+}
+
+@layer components {
+  /* Glassmorphic surface: blur + adaptive translucent fill + border */
+  .glass {
+    background: var(--glass-bg);
+    -webkit-backdrop-filter: blur(16px);
+    backdrop-filter: blur(16px);
+    border: 1px solid var(--border);
+  }
+
+  /* Adaptive card fill (white sheen in dark, white card in light) */
+  .surface {
+    background: var(--surface);
+  }
+
+  .eyebrow {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--eyebrow);
+  }
+
+  /* Film-grain noise overlay (feTurbulence data URI) */
+  .noise-overlay {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.035;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.55'/%3E%3C/svg%3E");
+  }
+
+  /* Subtle engineering grid, masked radially */
+  .grid-pattern {
+    background-image:
+      linear-gradient(to right, rgba(148, 163, 184, 0.16) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(148, 163, 184, 0.16) 1px, transparent 1px);
+    background-size: 56px 56px;
+    -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 0%, black, transparent 75%);
+    mask-image: radial-gradient(ellipse 70% 60% at 50% 0%, black, transparent 75%);
+  }
+
+  /* Animated logo marquee */
+  .marquee {
+    animation: marquee 32s linear infinite;
+  }
+  @keyframes marquee {
+    to {
+      transform: translateX(-50%);
+    }
+  }
+
+  /* Gradient shine sweep for primary CTAs */
+  .btn-shine::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      105deg,
+      transparent 40%,
+      rgba(255, 255, 255, 0.35) 50%,
+      transparent 60%
+    );
+    transform: translateX(-130%);
+    transition: transform 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .group:hover .btn-shine::before {
+    transform: translateX(130%);
+  }
+
+  /* Animated gradient shimmer sweeping across the footer watermark on hover.
+     Theme-aware via var(--foreground) so it reads on both light and dark. */
+  .watermark-shimmer {
+    /* Brand indigo → cyan band (same tokens as .text-gradient), theme-aware */
+    background-image: linear-gradient(
+      100deg,
+      transparent 25%,
+      var(--gradient-from) 37.5%,
+      var(--gradient-via) 50%,
+      var(--gradient-to) 62.5%,
+      transparent 75%
+    );
+    background-size: 200% 100%;
+    background-position: 200% 0;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    -webkit-text-fill-color: transparent;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+  .group:hover .watermark-shimmer {
+    /* 2.5s sweep, 70% band, 0.3 intensity — ease-in-out so the band breathes
+       (decelerates at the edges, glides through the middle) instead of sweeping
+       uniformly */
+    opacity: 0.3;
+    animation: watermark-shimmer 2.5s ease-in-out infinite;
+  }
+  @keyframes watermark-shimmer {
+    to {
+      background-position: -200% 0;
+    }
+  }
+
+  /* Soft brand bloom behind the footer watermark — custom class because the
+     arbitrary drop-shadow-[...] utility doesn't emit CSS for rgba() values */
+  .watermark-glow {
+    filter: drop-shadow(0 0 50px rgba(99, 102, 241, 0.22));
+  }
+  .dark .watermark-glow {
+    filter: drop-shadow(0 0 60px rgba(129, 140, 248, 0.3));
+  }
+
+  /* Premium range slider */
+  .range-premium {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 6px;
+    border-radius: 9999px;
+    background: linear-gradient(
+      to right,
+      #6366f1 0%,
+      #06b6d4 var(--range-fill, 50%),
+      var(--slider-track) var(--range-fill, 50%)
+    );
+    outline: none;
+    cursor: pointer;
+  }
+  .range-premium::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #ffffff;
+    border: 3px solid #6366f1;
+    box-shadow: 0 0 0 5px rgba(99, 102, 241, 0.2);
+    cursor: pointer;
+  }
+  .range-premium::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #ffffff;
+    border: 3px solid #6366f1;
+    box-shadow: 0 0 0 5px rgba(99, 102, 241, 0.2);
+    cursor: pointer;
+  }
+} /* App-shell page transition — subtle fade + rise on route change */
+.page-enter {
+  animation: page-enter 0.24s ease-out both;
+}
+@keyframes page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Gradient text — placed OUTSIDE @layer so Tailwind v4 / Lightning CSS
+     cannot interfere with background-clip: text via cascade layers. */
+.text-gradient {
+  background-image: linear-gradient(
+    92deg,
+    var(--gradient-from) 0%,
+    var(--gradient-via) 45%,
+    var(--gradient-to) 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Print: report-only output — hide app chrome, interactive controls, and floating elements. */
+@media print {
+  aside,
+  header,
+  nav,
+  button,
+  .no-print,
+  [aria-label='Keyboard shortcuts'],
+  [aria-label='Open copilot'],
+  [data-tour='copilot-button'] {
+    display: none !important;
+  }
+  body {
+    background: #fff !important;
+    color: #111 !important;
+  }
+  main {
+    max-width: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+  .page-enter {
+    animation: none !important;
+  }
+  /* Charts & cards — ensure they print cleanly */
+  .recharts-responsive-container {
+    page-break-inside: avoid;
+  }
+  card,
+  [class*='Card'] {
+    page-break-inside: avoid;
+    border: 1px solid #e5e7eb !important;
+  }
+  /* KPI numbers should be large and readable */
+  [class*='text-2xl'],
+  [class*='text-3xl'] {
+    font-size: 1.5rem !important;
+  }
+  /* Force dark-mode charts to print in light colors */
+  .dark .recharts-cartesian-grid line {
+    stroke: #e5e7eb !important;
+  }
+  .dark .recharts-text {
+    fill: #374151 !important;
+  }
+}

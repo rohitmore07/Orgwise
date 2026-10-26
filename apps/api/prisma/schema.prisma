@@ -1,0 +1,336 @@
+generator client {
+  provider      = "prisma-client-js"
+  // "native" keeps local development on the host platform; debian-openssl-3.0.x handles Render,
+  // and rhel-openssl-3.0.x handles AWS Lambda environments.
+  binaryTargets = ["native", "debian-openssl-3.0.x", "rhel-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ───────────────────────────────────────────────────────────────────────────── Enums…
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Platform access roles. Coarse-grained by design; scope decisions live in
+/// services (managers are scoped to their assigned departments).
+enum Role {
+  admin
+  manager
+  viewer
+}
+
+/// Employment lifecycle state.
+enum EmployeeStatus {
+  active
+  on_leave
+  probation
+  terminated
+}
+
+/// Gender identity (self-reported).
+enum Gender {
+  female
+  male
+  non_binary
+  prefer_not_to_say
+}
+
+/// Outcome of a CSV bulk import.
+enum ImportStatus {
+  completed
+  partial
+  failed
+  rolled_back
+}
+
+// ───────────────────────────────────────────────────────────────────────────── Identity & access…
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Platform account. `email` is the join key with Neon Auth; the Neon-managed
+/// session is validated by the API and mapped to this row for RBAC.
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  role      Role     @default(viewer)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Optional link to an employee profile (self-service account claim).
+  employee Employee?
+
+  // Departments this user manages (RBAC scope for managers).
+  managedDepartments Department[] @relation("DepartmentManager")
+
+  imports         ImportHistory[]
+  auditLogs       AuditLog[]
+  aiConversations AiConversation[]
+
+  @@index([role])
+  @@index([email])
+}
+
+// ───────────────────────────────────────────────────────────────────────────── AI copilot (Phase 5)…
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// One copilot conversation thread. Owned by a user; messages are stored only when necessary for lightweight…
+/// context — never auth tokens, API keys or raw tool payloads.
+model AiConversation {
+  id        String      @id @default(cuid())
+  userId    String
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages  AiMessage[]
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  @@index([userId, updatedAt])
+}
+
+/// One copilot message (user question or assistant answer). `toolName` records
+/// which analytics tool grounded the answer so history shows provenance.
+model AiMessage {
+  id             String         @id @default(cuid())
+  conversationId String
+  conversation   AiConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  role           String
+  content        String
+  toolName       String?
+  createdAt      DateTime       @default(now())
+
+  @@index([conversationId, createdAt])
+}
+
+// ───────────────────────────────────────────────────────────────────────────── Organization…
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Organizational unit. Supports a hierarchy (`parentId`) and an assigned
+/// manager (`managerUserId`) that defines RBAC scope for manager accounts.
+model Department {
+  id          String    @id @default(cuid())
+  name        String
+  description String?
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  // Org hierarchy — a department may sit under a parent department.
+  parentId String?
+  parent   Department?  @relation("DepartmentHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  children Department[] @relation("DepartmentHierarchy")
+
+  // Assigned manager — the user whose RBAC scope includes this department.
+  managerUserId String?
+  managerUser   User?   @relation("DepartmentManager", fields: [managerUserId], references: [id], onDelete: SetNull)
+
+  teams         Team[]
+  employees     Employee[]
+  hiringRecords HiringRecord[]
+
+  @@unique([name, deletedAt])
+  @@index([parentId])
+  @@index([managerUserId])
+  @@index([deletedAt])
+}
+
+/// Sub-unit of a department (e.g. Platform, Growth under Engineering).
+model Team {
+  id          String    @id @default(cuid())
+  name        String
+  description String?
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  departmentId String
+  department   Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+
+  // Team lead — an employee record, not necessarily an account.
+  leadEmployeeId String?
+  leadEmployee   Employee? @relation("TeamLead", fields: [leadEmployeeId], references: [id], onDelete: SetNull)
+
+  employees Employee[]
+
+  @@unique([name, departmentId, deletedAt])
+  @@index([departmentId])
+  @@index([deletedAt])
+}
+
+// ───────────────────────────────────────────────────────────────────────────── Workforce…
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Employee record — the core workforce domain.
+model Employee {
+  id           String         @id @default(cuid())
+  employeeCode String         @unique
+  firstName    String
+  lastName     String
+  email        String         @unique
+  phone        String?
+  jobTitle     String
+  gender       Gender
+  dateOfBirth  DateTime?
+  hiredAt      DateTime
+  status       EmployeeStatus @default(active)
+  isActive     Boolean        @default(true)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  deletedAt    DateTime?
+
+  // Org placement.
+  departmentId String
+  department   Department @relation(fields: [departmentId], references: [id], onDelete: Restrict)
+
+  teamId String?
+  team   Team?   @relation(fields: [teamId], references: [id], onDelete: SetNull)
+
+  // Reporting line — the employee's manager is another employee.
+  managerId String?
+  manager   Employee?  @relation("ReportingLine", fields: [managerId], references: [id], onDelete: SetNull)
+  reports   Employee[] @relation("ReportingLine")
+
+  // Optional account claim (self-service) — links the profile to a platform account.
+  userId String? @unique
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  // Team leads are employees too.
+  ledTeams                 Team[]    @relation("TeamLead")
+  // ── Analytics & engagement profile (Phase 4) ───────────────────────────── IBM HR-style dimensions powering…
+  // the workforce-intelligence engine. All nullable so legacy rows and minimal imports report "not available" in…
+  attrition                Boolean   @default(false)
+  /// When the attrition event occurred (null while employed).
+  attritionDate            DateTime?
+  /// Monthly income in USD — gated to admin/manager roles in API views.
+  monthlyIncome            Int?
+  /// 1 (low) – 4 (high).
+  jobSatisfaction          Int?
+  /// 1 (low) – 4 (high).
+  environmentSatisfaction  Int?
+  /// 1 (low) – 4 (high).
+  relationshipSatisfaction Int?
+  /// 1 (low) – 4 (high).
+  workLifeBalance          Int?
+  /// Works beyond standard hours.
+  overTime                 Boolean   @default(false)
+  /// 1 (low) – 4 (high).
+  performanceRating        Int?
+  /// 1 (below) – 5 (doctorate).
+  education                Int?
+  /// e.g. Life Sciences, Marketing, Technical Degree.
+  educationField           String?
+  /// 1 (entry) – 5 (executive).
+  jobLevel                 Int?
+  yearsAtCompany           Int?
+  yearsInCurrentRole       Int?
+  yearsSinceLastPromotion  Int?
+  yearsWithCurrManager     Int?
+  totalWorkingYears        Int?
+  distanceFromHome         Int?
+  maritalStatus            String?
+  businessTravel           String?
+  numCompaniesWorked       Int?
+  trainingTimesLastYear    Int?
+  percentSalaryHike        Int?
+  stockOptionLevel         Int?
+
+  @@index([departmentId])
+  @@index([teamId])
+  @@index([managerId])
+  @@index([status])
+  @@index([hiredAt])
+  @@index([deletedAt])
+  @@index([firstName, lastName])
+  // Analytics query paths: attrition is the core risk dimension; the satisfaction/income filters in the explorer…
+  // and analytics engine read these columns regularly on the scoped employee set.
+  @@index([attrition])
+  @@index([overTime])
+  @@index([jobSatisfaction])
+  @@index([monthlyIncome])
+  @@index([jobTitle])
+}
+
+// ───────────────────────────────────────────────────────────────────────────── Imports & audit…
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// One job requisition in the hiring pipeline (Option B — real TA metrics).
+/// Carries the full requisition → offer → accept lifecycle so time-to-hire,
+/// cost-per-hire and offer-acceptance can be computed instead of fabricated.
+model HiringRecord {
+  id               String     @id @default(cuid())
+  /// e.g. REQ-2026-001
+  requisitionId    String
+  jobTitle         String
+  departmentId     String
+  department       Department @relation(fields: [departmentId], references: [id], onDelete: Restrict)
+  candidateName    String?
+  openedAt         DateTime
+  firstInterviewAt DateTime?
+  offerSentAt      DateTime?
+  /// When the offer was accepted (hired).
+  acceptedAt       DateTime?
+  startDate        DateTime?
+  /// pending | accepted | declined | withdrawn (null until an offer is sent).
+  offerStatus      String?
+  /// open | in_review | offer_sent | hired | closed
+  status           String
+  /// Direct sourcing cost in USD (agency, ads, referrals).
+  sourcingCost     Int?
+  /// Internal recruiting cost in USD (HR time, assessments).
+  recruitingCost   Int?
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+
+  @@index([departmentId])
+  @@index([status])
+  @@index([openedAt])
+}
+
+/// Result of a CSV bulk import, including a per-row error report.
+model ImportHistory {
+  id               String       @id @default(cuid())
+  fileName         String
+  /// employees | hiring
+  type             String?
+  /// Optional user-provided batch name shown in history.
+  label            String?
+  status           ImportStatus
+  totalRows        Int
+  successCount     Int
+  /// Rows updated in place (duplicateStrategy = update).
+  updatedCount     Int          @default(0)
+  failedCount      Int
+  duplicateCount   Int          @default(0)
+  /// JSON array of `{ row, email?, employeeCode?, errors: string[] }`.
+  errorReport      Json?
+  /// IDs of the employee/hiring records created by this import — enables rollback.
+  importedRecordIds String[]   @default([])
+  importedByUserId String
+  importedByUser   User         @relation(fields: [importedByUserId], references: [id], onDelete: Restrict)
+  createdAt        DateTime     @default(now())
+  /// Processing time in milliseconds (import-history view).
+  durationMs       Int?
+
+  @@index([importedByUserId])
+  @@index([createdAt])
+}
+
+/// Basic audit trail for state-changing operations.
+model AuditLog {
+  id          String   @id @default(cuid())
+  actorUserId String?
+  actorUser   User?    @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
+  action      String
+  entityType  String
+  entityId    String?
+  details     Json?
+  ipAddress   String?
+  createdAt   DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([actorUserId])
+  @@index([createdAt])
+}

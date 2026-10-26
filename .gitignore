@@ -1,0 +1,46 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build outputs
+dist/
+build/
+.next/
+out/
+.turbo/
+*.tsbuildinfo
+
+# Serverless Framework + Lambda packaging
+.serverless/
+.serverless-build/
+
+# Environment files
+.env
+.env.*
+!.env.example
+!.env*.example
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+pnpm-debug.log*
+
+# Coverage
+coverage/
+
+# Prisma generated clients (when a custom output is configured)
+apps/api/prisma/generated/
+
+# Editor / OS
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
+
+# Freebuff client state
+.freebuff/
+desktop-v2.db
+desktop-v2.db-shm
+desktop-v2.db-wal

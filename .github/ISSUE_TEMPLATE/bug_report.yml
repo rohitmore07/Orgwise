@@ -1,0 +1,51 @@
+name: Bug report
+description: Report a defect in the orgwise platform
+title: '[Bug]: '
+labels: ['bug', 'triage']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug. Please fill in as much as you can — it helps us fix it faster.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Affected area
+      options:
+        - Web (apps/web)
+        - API (apps/api)
+        - Shared packages
+        - Tooling / CI
+        - Documentation
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What is the bug? What did you expect to happen?
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Run `pnpm dev:web`
+        2. Navigate to ...
+        3. Observe ...
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: Node version, pnpm version, OS, browser (if applicable)
+      placeholder: 'Node 24.15, pnpm 10.33, Windows 11, Chrome 136'
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / screenshots
+      description: Paste any relevant terminal output, stack traces, or screenshots.

@@ -1,0 +1,32 @@
+services:
+  - type: web
+    name: orgwise-api
+    env: node
+    plan: free
+    buildCommand: pnpm install --frozen-lockfile && pnpm --filter=@orgwise/api prisma:generate && pnpm build --filter=@orgwise/api
+    startCommand: pnpm --filter=@orgwise/api prisma:deploy && pnpm --filter=@orgwise/api start:prod
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: 20.19.0
+      - key: TRUST_PROXY
+        value: 'true'
+      - key: DATABASE_URL
+        sync: false
+      - key: NEON_AUTH_BASE_URL
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false
+      - key: SESSION_CACHE_TTL_MS
+        value: '60000'
+      - key: RATE_LIMIT_TTL_MS
+        value: '60000'
+      - key: RATE_LIMIT_MAX
+        value: '120'
+      - key: SWAGGER_ENABLED
+        value: 'true'
+      - key: SWAGGER_PATH
+        value: docs
+      - key: REQUEST_LOGGING_ENABLED
+        value: 'true'
